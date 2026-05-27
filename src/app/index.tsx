@@ -1,98 +1,112 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useRef } from 'react';
+import {
+  NativeSyntheticEvent,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Camera, Map, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
 
-function getDevMenuHint() {
+const INITIAL_CENTER: [number, number] = [-121.7269, 46.8523]; // Mt. Rainier, WA
+const STYLE_URL = 'https://demotiles.maplibre.org/style.json';
+
+export default function MapScreen() {
+  const insets = useSafeAreaInsets();
+  const mapCenterRef = useRef<[number, number]>(INITIAL_CENTER);
+
+  const handleRegionChange = useCallback(
+    (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+      mapCenterRef.current = event.nativeEvent.center;
+    },
+    []
+  );
+
+  const handleDropWaypoint = useCallback(() => {
+    const [lng, lat] = mapCenterRef.current;
+    console.log(
+      `[TrailForge] Drop Waypoint → lat: ${lat.toFixed(6)}, lng: ${lng.toFixed(6)}`
+    );
+  }, []);
+
   if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <View style={styles.webFallback}>
+        <Text style={styles.webFallbackText}>Map requires a native development build.</Text>
+        <Text style={styles.webFallbackSub}>
+          npx expo run:ios  |  npx expo run:android
+        </Text>
+      </View>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <View style={styles.container}>
+      <Map
+        style={styles.map}
+        mapStyle={STYLE_URL}
+        onRegionIsChanging={handleRegionChange}
+      >
+        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: 9 }} />
+      </Map>
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <View style={[styles.buttonWrap, { bottom: insets.bottom + 32 }]}>
+        <TouchableOpacity
+          style={styles.waypointBtn}
+          onPress={handleDropWaypoint}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.waypointBtnText}>+ Drop Waypoint</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1 },
+  map: { flex: 1 },
+  buttonWrap: {
+    position: 'absolute',
+    alignSelf: 'center',
+  },
+  waypointBtn: {
+    backgroundColor: '#1D6D4A',
+    paddingHorizontal: 28,
+    paddingVertical: 15,
+    borderRadius: 100,
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  waypointBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  webFallback: {
     flex: 1,
     justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: 8,
+    paddingHorizontal: 32,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
+  webFallbackText: {
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
+    color: '#111',
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  webFallbackSub: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'monospace',
+    textAlign: 'center',
   },
 });
