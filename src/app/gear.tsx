@@ -1,18 +1,22 @@
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const GEAR_CATEGORIES = [
-  { label: 'Shelter', weight: '—', unit: 'g' },
-  { label: 'Sleep System', weight: '—', unit: 'g' },
-  { label: 'Pack', weight: '—', unit: 'g' },
-  { label: 'Clothing', weight: '—', unit: 'g' },
-  { label: 'Navigation', weight: '—', unit: 'g' },
-  { label: 'Food & Water', weight: '—', unit: 'g' },
-  { label: 'First Aid', weight: '—', unit: 'g' },
-];
+
 
 export default function GearScreen() {
   const insets = useSafeAreaInsets();
+  const [categories, setCategories] = useState([
+    { label: 'Shelter',     weight: 0 },
+    { label: 'Sleep System', weight: 0 },
+    { label: 'Pack',        weight: 0 },
+    { label: 'Clothing',    weight: 0 },
+    { label: 'Navigation',  weight: 0 },
+    { label: 'Food & Water', weight: 0 },
+    { label: 'First Aid',   weight: 0 },
+  ]);
+  const totalWeight = categories.reduce((total, item) => total + item.weight, 0);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   return (
     <ScrollView
@@ -37,11 +41,11 @@ export default function GearScreen() {
             Weight
           </Text>
         </View>
-        {GEAR_CATEGORIES.map((item, idx) => (
+        {categories.map((item, idx) => (
           <View
             key={item.label}
             className={`flex-row items-center px-4 py-3 ${
-              idx < GEAR_CATEGORIES.length - 1
+              idx < categories.length - 1
                 ? 'border-b border-gray-100 dark:border-gray-800'
                 : ''
             } bg-white dark:bg-gray-900`}
@@ -50,7 +54,7 @@ export default function GearScreen() {
               {item.label}
             </Text>
             <Text className="text-sm text-gray-400 dark:text-gray-500">
-              {item.weight} {item.unit}
+              {item.weight} g  
             </Text>
           </View>
         ))}
@@ -58,7 +62,7 @@ export default function GearScreen() {
           <Text className="flex-1 text-sm font-bold text-gray-900 dark:text-white">
             Base Weight
           </Text>
-          <Text className="text-sm font-bold text-trail-green">0 g</Text>
+          <Text className="text-sm font-bold text-trail-green"> {totalWeight} g</Text>
         </View>
       </View>
 
