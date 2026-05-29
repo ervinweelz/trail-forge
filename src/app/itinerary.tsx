@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +14,24 @@ export default function ItineraryScreen() {
   const [tripName, setTripName] = useState('My Trip');
   const [days, setDays] = useState<Day[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const savedName = await AsyncStorage.getItem('trip-name');
+      const savedDays = await AsyncStorage.getItem('trip-days');
+      if (savedName) setTripName(savedName);
+      if (savedDays) setDays(JSON.parse(savedDays));
+      setHasLoaded(true);
+    }
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    AsyncStorage.setItem('trip-name', tripName);
+    AsyncStorage.setItem('trip-days', JSON.stringify(days));
+  }, [tripName, days, hasLoaded]);
 
   const totalDistance = days.reduce((sum, day) => sum + day.distanceKm, 0);
 
@@ -30,7 +49,6 @@ export default function ItineraryScreen() {
       prev.map(day => day.id === id ? { ...day, [field]: value } : day)
     );
   }
-
 
   return (
     <ScrollView

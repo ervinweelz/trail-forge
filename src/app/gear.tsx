@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +17,23 @@ export default function GearScreen() {
   const totalWeight = categories.reduce((total, item) => total + item.weight, 0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // LOAD: runs once when the screen first appears
+  useEffect(() => {
+    async function load() {
+      const saved = await AsyncStorage.getItem('gear-categories');
+      if (saved) setCategories(JSON.parse(saved));
+      setHasLoaded(true);
+    }
+    load();
+  }, []);
+
+  // SAVE: runs every time categories changes, but only after loading is done
+  useEffect(() => {
+    if (!hasLoaded) return;
+    AsyncStorage.setItem('gear-categories', JSON.stringify(categories));
+  }, [categories, hasLoaded]);
 
   function updateWeight(index: number, val: string) {
     const num = parseFloat(val) || 0;
