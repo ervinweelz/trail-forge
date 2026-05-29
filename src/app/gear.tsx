@@ -1,22 +1,34 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-
 
 export default function GearScreen() {
   const insets = useSafeAreaInsets();
   const [categories, setCategories] = useState([
-    { label: 'Shelter',     weight: 0 },
+    { label: 'Shelter',      weight: 0 },
     { label: 'Sleep System', weight: 0 },
-    { label: 'Pack',        weight: 0 },
-    { label: 'Clothing',    weight: 0 },
-    { label: 'Navigation',  weight: 0 },
+    { label: 'Pack',         weight: 0 },
+    { label: 'Clothing',     weight: 0 },
+    { label: 'Navigation',   weight: 0 },
     { label: 'Food & Water', weight: 0 },
-    { label: 'First Aid',   weight: 0 },
+    { label: 'First Aid',    weight: 0 },
   ]);
   const totalWeight = categories.reduce((total, item) => total + item.weight, 0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [newLabel, setNewLabel] = useState('');
+
+  function updateWeight(index: number, val: string) {
+    const num = parseFloat(val) || 0;
+    setCategories(prev =>
+      prev.map((cat, i) => i === index ? { ...cat, weight: num } : cat)
+    );
+  }
+
+  function addItem() {
+    if (newLabel.trim() === '') return;
+    setCategories(prev => [...prev, { label: newLabel.trim(), weight: 0 }]);
+    setNewLabel('');
+  }
 
   return (
     <ScrollView
@@ -38,12 +50,13 @@ export default function GearScreen() {
             Category
           </Text>
           <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Weight
+            Weight (g)
           </Text>
         </View>
         {categories.map((item, idx) => (
-          <View
+          <TouchableOpacity
             key={item.label}
+            onPress={() => setSelectedIndex(idx)}
             className={`flex-row items-center px-4 py-3 ${
               idx < categories.length - 1
                 ? 'border-b border-gray-100 dark:border-gray-800'
@@ -53,17 +66,48 @@ export default function GearScreen() {
             <Text className="flex-1 text-sm text-gray-800 dark:text-gray-200">
               {item.label}
             </Text>
-            <Text className="text-sm text-gray-400 dark:text-gray-500">
-              {item.weight} g  
-            </Text>
-          </View>
+
+            {selectedIndex === idx ? (
+              <TextInput
+                className="text-sm text-gray-800 dark:text-gray-200 w-16 text-right"
+                keyboardType="numeric"
+                value={String(item.weight === 0 ? '' : item.weight)}
+                onChangeText={(val) => updateWeight(idx, val)}
+                onBlur={() => setSelectedIndex(null)}
+                autoFocus
+              />
+            ) : (
+              <Text className="text-sm text-gray-400 dark:text-gray-500">
+                {item.weight} g
+              </Text>
+            )}
+          </TouchableOpacity>
         ))}
+
         <View className="flex-row items-center px-4 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <Text className="flex-1 text-sm font-bold text-gray-900 dark:text-white">
             Base Weight
           </Text>
-          <Text className="text-sm font-bold text-trail-green"> {totalWeight} g</Text>
+          <Text className="text-sm font-bold text-trail-green">{totalWeight} g</Text>
         </View>
+      </View>
+
+      <View className="mx-4 mt-3 flex-row gap-2">
+        <TextInput
+          className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200"
+          placeholder="New category..."
+          placeholderTextColor="#9CA3AF"
+          value={newLabel}
+          onChangeText={setNewLabel}
+          onSubmitEditing={addItem}
+          returnKeyType="done"
+        />
+        <TouchableOpacity
+          onPress={addItem}
+          className="bg-trail-green px-4 rounded-xl justify-center"
+        >
+          <Text className="text-white font-semibold text-sm">Add</Text>
+        </TouchableOpacity>
       </View>
 
       <View className="mx-4 mt-3 rounded-2xl bg-gray-50 dark:bg-gray-900 p-5 border border-gray-100 dark:border-gray-800">
