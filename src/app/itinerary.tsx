@@ -1,41 +1,120 @@
-import { ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+type Day = {
+  id: number;
+  distanceKm: number;
+  notes: string;
+};
 
 export default function ItineraryScreen() {
   const insets = useSafeAreaInsets();
+  const [tripName, setTripName] = useState('My Trip');
+  const [days, setDays] = useState<Day[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const totalDistance = days.reduce((sum, day) => sum + day.distanceKm, 0);
+
+  function addDay() {
+    const newDay: Day = {
+      id: Date.now(),
+      distanceKm: 0,
+      notes: '',
+    };
+    setDays(prev => [...prev, newDay]);
+  }
+
+  function updateDay(id: number, field: 'distanceKm' | 'notes', value: string | number) {
+    setDays(prev =>
+      prev.map(day => day.id === id ? { ...day, [field]: value } : day)
+    );
+  }
+
 
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-black"
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }}
     >
-      <View className="px-6 pb-4">
-        <Text className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Itinerary
-        </Text>
-        <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Trip logistics planner
-        </Text>
+      <TextInput
+          className="px-6 text-3xl font-bold text-gray-900 dark:text-white tracking-tight"
+          value={tripName}
+          onChangeText={setTripName}
+          placeholder="Trip name..."
+          placeholderTextColor="#9CA3AF"
+        />
+      <Text className="px-6 mt-1 text-sm text-gray-500 dark:text-gray-400">
+        {days.length} {days.length === 1 ? 'day' : 'days'} · {totalDistance} km
+      </Text>
+            {/* Day cards */}
+      <View className="mx-4 mt-6 gap-3">
+        {days.map((day, idx) => (
+          <View
+            key={day.id}
+            className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+          >
+            {/* Card header — always visible, tappable to expand/collapse */}
+            <TouchableOpacity
+              onPress={() => setExpandedId(expandedId === day.id ? null : day.id)}
+            >
+              <View className="flex-row items-center px-4 py-4 bg-white dark:bg-gray-900">
+                <Text className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  Day {idx + 1}
+                </Text>
+                <Text className="text-sm text-gray-400 dark:text-gray-500 mr-3">
+                  {day.distanceKm} km
+                </Text>
+                <Text className="text-gray-400 dark:text-gray-500">
+                  {expandedId === day.id ? '▼' : '▶'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {expandedId === day.id && (
+              <View className="px-4 pb-4 bg-white dark:bg-gray-900 gap-3 border-t border-gray-100 dark:border-gray-800">
+                <View>
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 mt-3">
+                    Distance (km)
+                  </Text>
+                  <TextInput
+                    className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200"
+                    keyboardType="numeric"
+                    value={String(day.distanceKm === 0 ? '' : day.distanceKm)}
+                    onChangeText={(val) => updateDay(day.id, 'distanceKm', parseFloat(val) || 0)}
+                    placeholder="0"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                    Notes
+                  </Text>
+                  <TextInput
+                    className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200"
+                    multiline
+                    numberOfLines={3}
+                    value={day.notes}
+                    onChangeText={(val) => updateDay(day.id, 'notes', val)}
+                    placeholder="Trail notes, campsite info..."
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        ))}
       </View>
 
-      <View className="mx-4 mt-4 rounded-2xl bg-gray-50 dark:bg-gray-900 p-5 border border-gray-100 dark:border-gray-800">
-        <Text className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
-          Planned Feature: Drag-and-Drop Day Planner
-        </Text>
-        <Text className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          Each day card will hold waypoints, campsites, and mileage estimates pulled
-          from the local SQLite trail database. Reorder days with a long-press gesture.
-        </Text>
-      </View>
-
-      <View className="mx-4 mt-3 rounded-2xl bg-gray-50 dark:bg-gray-900 p-5 border border-gray-100 dark:border-gray-800">
-        <Text className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
-          Planned Feature: Weather & Permit Alerts
-        </Text>
-        <Text className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          RAG AI backend will surface permit windows, fire closures, and forecasted
-          weather for the exact corridors in your itinerary.
-        </Text>
+      {/* Add Day button */}
+      <View className="mx-4 mt-4">
+        <TouchableOpacity
+          onPress={addDay}
+          className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl py-4 items-center"
+        >
+          <Text className="text-sm font-semibold text-gray-400 dark:text-gray-500">
+            + Add Day
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
