@@ -122,9 +122,9 @@ export default function ItineraryScreen() {
                 </View>
                 <TouchableOpacity
                   onPress={() => deleteDay(day.id)}
-                  className="ml-3"
+                  className="mt-2 bg-red-50 rounded-xl py-3 items-center"
                 >
-                  <Text className="text-red-400 font-bold text-base">×</Text>
+                  <Text className="text-red-500 font-semibold text-sm">Delete Day</Text>
                 </TouchableOpacity>
               
               </View>

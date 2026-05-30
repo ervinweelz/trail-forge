@@ -100,9 +100,9 @@ export default function GearScreen() {
                 />
                 <TouchableOpacity
                   onPress={() => deleteItem(idx)}
-                  className="ml-3"
+                  className="ml-3 bg-red-50 px-2 py-1 rounded-lg"
                 >
-                  <Text className="text-red-400 font-bold text-base">×</Text>
+                  <Text className="text-red-500 font-semibold text-sm">Delete</Text>
                 </TouchableOpacity>
               </>
             ) : (
