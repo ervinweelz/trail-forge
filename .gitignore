@@ -38,6 +38,8 @@ yarn-error.*
 
 example
 
-# generated native folders
-/ios
+# generated native folders — track Podfile so MapLibre fix persists
+/ios/*
+!/ios/Podfile
+!/ios/Podfile.properties.json
 /android
