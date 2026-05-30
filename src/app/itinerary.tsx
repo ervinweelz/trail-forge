@@ -50,6 +50,9 @@ export default function ItineraryScreen() {
     );
   }
 
+  function deleteDay(id: number) {
+    setDays(prev => prev.filter(day => day.id !== id));
+  }
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-black"
@@ -117,6 +120,13 @@ export default function ItineraryScreen() {
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
+                <TouchableOpacity
+                  onPress={() => deleteDay(day.id)}
+                  className="ml-3"
+                >
+                  <Text className="text-red-400 font-bold text-base">×</Text>
+                </TouchableOpacity>
+              
               </View>
             )}
           </View>
