@@ -47,6 +47,9 @@ export default function GearScreen() {
     setCategories(prev => [...prev, { label: newLabel.trim(), weight: 0 }]);
     setNewLabel('');
   }
+  function deleteItem(index: number) {
+    setCategories(prev => prev.filter((_, i) => i !== index));
+  }
 
   return (
     <ScrollView
@@ -86,14 +89,22 @@ export default function GearScreen() {
             </Text>
 
             {selectedIndex === idx ? (
-              <TextInput
-                className="text-sm text-gray-800 dark:text-gray-200 w-16 text-right"
-                keyboardType="numeric"
-                value={String(item.weight === 0 ? '' : item.weight)}
-                onChangeText={(val) => updateWeight(idx, val)}
-                onBlur={() => setSelectedIndex(null)}
-                autoFocus
-              />
+              <>
+                <TextInput
+                  className="text-sm text-gray-800 dark:text-gray-200 w-16 text-right"
+                  keyboardType="numeric"
+                  value={String(item.weight === 0 ? '' : item.weight)}
+                  onChangeText={(val) => updateWeight(idx, val)}
+                  onBlur={() => setSelectedIndex(null)}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => deleteItem(idx)}
+                  className="ml-3"
+                >
+                  <Text className="text-red-400 font-bold text-base">×</Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <Text className="text-sm text-gray-400 dark:text-gray-500">
                 {item.weight} g
