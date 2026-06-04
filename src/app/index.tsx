@@ -95,7 +95,7 @@ export default function MapScreen() {
           onRegionIsChanging={handleRegionChange}
           onRegionDidChange={handleRegionDidChange}
       >
-        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: 9 }} />
+        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: 11 }} />
       </Map>
       {weather && (
           <View style={[styles.weatherChip, { top: insets.top + 16 }]}>
