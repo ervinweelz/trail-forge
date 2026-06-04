@@ -11,8 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Camera, Map, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
 
-const INITIAL_CENTER: [number, number] = [-121.7269, 46.8523]; // Mt. Rainier, WA
-const STYLE_URL = 'https://demotiles.maplibre.org/style.json';
+const INITIAL_CENTER: [number, number] = [103.8198, 1.3521]; // Singapore
+const STYLE_URL = 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=3abxJO13uTPi5sndn2Ep';
 type Weather = {
   tempC: number;
   windKmh: number;
