@@ -1,5 +1,8 @@
+import { Camera, Map, Marker, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   NativeSyntheticEvent,
   Platform,
   StyleSheet,
@@ -9,8 +12,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Camera, Map, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
-
 const INITIAL_CENTER: [number, number] = [103.8198, 1.3521]; // Singapore
 const STYLE_URL = 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=3abxJO13uTPi5sndn2Ep';
 type Weather = {
@@ -18,6 +19,14 @@ type Weather = {
   windKmh: number;
   description: string;
 };
+
+type Waypoint = {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+};
+
 
 function weatherDescription(code: number): string {
   if (code === 0) return 'Clear sky';
@@ -48,6 +57,8 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapCenterRef = useRef<[number, number]>(INITIAL_CENTER);
   const [weather, setWeather] = useState<Weather | null>(null);
+  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     const [lng, lat] = INITIAL_CENTER;
@@ -60,12 +71,32 @@ export default function MapScreen() {
     []
   );
 
+  useEffect(() => {
+  async function load() {
+    const saved = await AsyncStorage.getItem('waypoints');
+    if (saved) setWaypoints(JSON.parse(saved));
+    setHasLoaded(true);
+  }
+  load();
+}, []);
+
+useEffect(() => {
+  if (!hasLoaded) return;
+  AsyncStorage.setItem('waypoints', JSON.stringify(waypoints));
+}, [waypoints, hasLoaded]);
+
   const handleDropWaypoint = useCallback(() => {
-    const [lng, lat] = mapCenterRef.current;
-    console.log(
-      `[TrailForge] Drop Waypoint → lat: ${lat.toFixed(6)}, lng: ${lng.toFixed(6)}`
-    );
-  }, []);
+  const [lng, lat] = mapCenterRef.current;
+  setWaypoints(prev => [
+    ...prev,
+    {
+      id: Date.now(),
+      name: `Waypoint ${prev.length + 1}`,
+      lat,
+      lng,
+    },
+  ]);
+}, []);
 
   const handleRegionDidChange = useCallback(
   (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
@@ -96,6 +127,25 @@ export default function MapScreen() {
           onRegionDidChange={handleRegionDidChange}
       >
         <Camera initialViewState={{ center: INITIAL_CENTER, zoom: 11 }} />
+       {waypoints.map(waypoint => (
+        <Marker
+          key={String(waypoint.id)}
+          id={String(waypoint.id)}
+          lngLat={[waypoint.lng, waypoint.lat]}
+          onPress={() =>
+      Alert.alert(waypoint.name, 'Delete this waypoint?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => setWaypoints(prev => prev.filter(w => w.id !== waypoint.id)),
+        },
+         ])
+    }
+        >
+          <View style={styles.marker} />
+        </Marker>
+      ))}
       </Map>
       {weather && (
           <View style={[styles.weatherChip, { top: insets.top + 16 }]}>
@@ -187,5 +237,17 @@ const styles = StyleSheet.create({
   weatherDesc: {
     fontSize: 13,
     color: '#555',
-  }
+  },
+  marker: {
+  width: 20,
+  height: 20,
+  borderRadius: 10,
+  backgroundColor: '#1D6D4A',
+  borderWidth: 3,
+  borderColor: '#fff',
+  shadowColor: '#000',
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+}
 });
