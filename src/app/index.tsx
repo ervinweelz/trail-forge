@@ -1,16 +1,19 @@
-import { Camera, Map, Marker, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
+import { Camera, type CameraRef, Map, Marker, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  FlatList,
   NativeSyntheticEvent,
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const INITIAL_CENTER: [number, number] = [103.8198, 1.3521]; // Singapore
 const STYLE_URL = 'https://api.maptiler.com/maps/outdoor-v2/style.json?key=3abxJO13uTPi5sndn2Ep';
@@ -52,6 +55,23 @@ async function fetchWeather(lat: number, lng: number): Promise<Weather> {
     description: weatherDescription(data.current.weathercode),
   };
 }
+type GeocodingResult = {
+  name: string;
+  lngLat: [number, number];
+};
+
+async function searchPlaces(query: string): Promise<GeocodingResult[]> {
+  if (!query.trim()) return [];
+  const url =
+    `https://api.maptiler.com/geocoding/${encodeURIComponent(query)}.json` +
+    `?key=3abxJO13uTPi5sndn2Ep&limit=5`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.features.map((f: any) => ({
+    name: f.place_name,
+    lngLat: f.center as [number, number],
+  }));
+}
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -59,6 +79,10 @@ export default function MapScreen() {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const cameraRef = useRef<CameraRef>(null);
+const [query, setQuery] = useState('');
+const [results, setResults] = useState<GeocodingResult[]>([]);
+const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     const [lng, lat] = INITIAL_CENTER;
@@ -126,7 +150,9 @@ useEffect(() => {
           onRegionIsChanging={handleRegionChange}
           onRegionDidChange={handleRegionDidChange}
       >
-        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: 11 }} />
+        <Camera ref={cameraRef}
+        initialViewState={{ 
+          center: INITIAL_CENTER, zoom: 11 }} />
        {waypoints.map(waypoint => (
         <Marker
           key={String(waypoint.id)}
@@ -147,6 +173,45 @@ useEffect(() => {
         </Marker>
       ))}
       </Map>
+      
+      <View style={[styles.searchContainer, { top: insets.top + 16 }]}>
+  <TextInput
+    style={styles.searchInput}
+    placeholder="Search places..."
+    placeholderTextColor="#9CA3AF"
+    value={query}
+    onChangeText={async (text) => {
+      setQuery(text);
+      if (text.length > 2) {
+        const found = await searchPlaces(text);
+        setResults(found);
+        setShowResults(true);
+      } else {
+        setShowResults(false);
+      }
+    }}
+  />
+  {showResults && (
+    <FlatList
+      data={results}
+      keyExtractor={(_, i) => String(i)}
+      style={styles.resultsList}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={styles.resultItem}
+          onPress={() => {
+            cameraRef.current?.flyTo({ center: item.lngLat, zoom: 14, duration: 1200 });
+            setQuery(item.name);
+            setShowResults(false);
+          }}
+        >
+          <Text style={styles.resultText} numberOfLines={1}>{item.name}</Text>
+        </TouchableOpacity>
+      )}
+    />
+  )}
+</View>
+      
       {weather && (
           <View style={[styles.weatherChip, { top: insets.top + 16 }]}>
             <Text style={styles.weatherTemp}>{weather.tempC}°C</Text>
@@ -249,5 +314,45 @@ const styles = StyleSheet.create({
   shadowOpacity: 0.3,
   shadowRadius: 4,
   shadowOffset: { width: 0, height: 2 },
-}
+},
+searchContainer: {
+  position: 'absolute',
+  left: 16,
+  right: 16,
+  zIndex: 10,
+},
+searchInput: {
+  backgroundColor: 'rgba(255,255,255,0.97)',
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  fontSize: 15,
+  color: '#111',
+  shadowColor: '#000',
+  shadowOpacity: 0.12,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 4,
+},
+resultsList: {
+  backgroundColor: '#fff',
+  borderRadius: 14,
+  marginTop: 6,
+  maxHeight: 220,
+  shadowColor: '#000',
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 4,
+},
+resultItem: {
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: '#F3F4F6',
+},
+resultText: {
+  fontSize: 14,
+  color: '#111',
+},
 });
