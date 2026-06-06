@@ -1,81 +1,38 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Day = {
-  id: number;
-  distanceKm: number;
-  notes: string;
-};
+import { useTripContext } from '@/context/TripContext';
 
 export default function ItineraryScreen() {
   const insets = useSafeAreaInsets();
-  const [tripName, setTripName] = useState('My Trip');
-  const [days, setDays] = useState<Day[]>([]);
+  const { tripName, setTripName, days, addDay, updateDay, deleteDay } = useTripContext();
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      const savedName = await AsyncStorage.getItem('trip-name');
-      const savedDays = await AsyncStorage.getItem('trip-days');
-      if (savedName) setTripName(savedName);
-      if (savedDays) setDays(JSON.parse(savedDays));
-      setHasLoaded(true);
-    }
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (!hasLoaded) return;
-    AsyncStorage.setItem('trip-name', tripName);
-    AsyncStorage.setItem('trip-days', JSON.stringify(days));
-  }, [tripName, days, hasLoaded]);
 
   const totalDistance = days.reduce((sum, day) => sum + day.distanceKm, 0);
 
-  function addDay() {
-    const newDay: Day = {
-      id: Date.now(),
-      distanceKm: 0,
-      notes: '',
-    };
-    setDays(prev => [...prev, newDay]);
-  }
-
-  function updateDay(id: number, field: 'distanceKm' | 'notes', value: string | number) {
-    setDays(prev =>
-      prev.map(day => day.id === id ? { ...day, [field]: value } : day)
-    );
-  }
-
-  function deleteDay(id: number) {
-    setDays(prev => prev.filter(day => day.id !== id));
-  }
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-black"
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }}
     >
       <TextInput
-          className="px-6 text-3xl font-bold text-gray-900 dark:text-white tracking-tight"
-          value={tripName}
-          onChangeText={setTripName}
-          placeholder="Trip name..."
-          placeholderTextColor="#9CA3AF"
-        />
+        className="px-6 text-3xl font-bold text-gray-900 dark:text-white tracking-tight"
+        value={tripName}
+        onChangeText={setTripName}
+        placeholder="Trip name..."
+        placeholderTextColor="#9CA3AF"
+      />
       <Text className="px-6 mt-1 text-sm text-gray-500 dark:text-gray-400">
         {days.length} {days.length === 1 ? 'day' : 'days'} · {totalDistance} km
       </Text>
-            {/* Day cards */}
+
       <View className="mx-4 mt-6 gap-3">
         {days.map((day, idx) => (
           <View
             key={day.id}
             className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
           >
-            {/* Card header — always visible, tappable to expand/collapse */}
             <TouchableOpacity
               onPress={() => setExpandedId(expandedId === day.id ? null : day.id)}
             >
@@ -126,14 +83,12 @@ export default function ItineraryScreen() {
                 >
                   <Text className="text-red-500 font-semibold text-sm">Delete Day</Text>
                 </TouchableOpacity>
-              
               </View>
             )}
           </View>
         ))}
       </View>
 
-      {/* Add Day button */}
       <View className="mx-4 mt-4">
         <TouchableOpacity
           onPress={addDay}

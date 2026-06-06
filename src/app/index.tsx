@@ -1,16 +1,17 @@
+import { useTripContext } from '@/context/TripContext';
 import { Camera, type CameraRef, Map, Marker, type ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
   NativeSyntheticEvent,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,12 +24,6 @@ type Weather = {
   description: string;
 };
 
-type Waypoint = {
-  id: number;
-  name: string;
-  lat: number;
-  lng: number;
-};
 
 
 function weatherDescription(code: number): string {
@@ -77,12 +72,15 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapCenterRef = useRef<[number, number]>(INITIAL_CENTER);
   const [weather, setWeather] = useState<Weather | null>(null);
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const cameraRef = useRef<CameraRef>(null);
-const [query, setQuery] = useState('');
-const [results, setResults] = useState<GeocodingResult[]>([]);
-const [showResults, setShowResults] = useState(false);
+  const { waypoints, addWaypoint, updateWaypoint, assignWaypoint, deleteWaypoint } = useTripContext();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<GeocodingResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(null);
+  const selectedWaypoint = waypoints.find(w => w.id === selectedWaypointId) ?? null;
+
+ 
 
   useEffect(() => {
     const [lng, lat] = INITIAL_CENTER;
@@ -95,32 +93,11 @@ const [showResults, setShowResults] = useState(false);
     []
   );
 
-  useEffect(() => {
-  async function load() {
-    const saved = await AsyncStorage.getItem('waypoints');
-    if (saved) setWaypoints(JSON.parse(saved));
-    setHasLoaded(true);
-  }
-  load();
-}, []);
 
-useEffect(() => {
-  if (!hasLoaded) return;
-  AsyncStorage.setItem('waypoints', JSON.stringify(waypoints));
-}, [waypoints, hasLoaded]);
-
-  const handleDropWaypoint = useCallback(() => {
+const handleDropWaypoint = useCallback(() => {
   const [lng, lat] = mapCenterRef.current;
-  setWaypoints(prev => [
-    ...prev,
-    {
-      id: Date.now(),
-      name: `Waypoint ${prev.length + 1}`,
-      lat,
-      lng,
-    },
-  ]);
-}, []);
+  addWaypoint(lat, lng);
+}, [addWaypoint]);
 
   const handleRegionDidChange = useCallback(
   (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
@@ -158,16 +135,7 @@ useEffect(() => {
           key={String(waypoint.id)}
           id={String(waypoint.id)}
           lngLat={[waypoint.lng, waypoint.lat]}
-          onPress={() =>
-      Alert.alert(waypoint.name, 'Delete this waypoint?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => setWaypoints(prev => prev.filter(w => w.id !== waypoint.id)),
-        },
-         ])
-    }
+          onPress={() => setSelectedWaypointId(waypoint.id)}
         >
           <View style={styles.marker} />
         </Marker>
@@ -231,6 +199,63 @@ useEffect(() => {
           <Text style={styles.waypointBtnText}>+ Drop Waypoint</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.crosshairContainer} pointerEvents="none">
+  <View style={styles.crosshairMarker} />
+  <View style={styles.crosshairShadow} />
+</View>
+
+<Modal
+  visible={selectedWaypoint !== null}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setSelectedWaypointId(null)}
+>
+  <TouchableOpacity
+    style={styles.modalOverlay}
+    activeOpacity={1}
+    onPress={() => setSelectedWaypointId(null)}
+  />
+  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
+      {selectedWaypoint && (
+        <>
+          <View style={styles.modalHandle} />
+
+          <Text style={styles.modalLabel}>Name</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={selectedWaypoint.name}
+            onChangeText={text => updateWaypoint(selectedWaypoint.id, 'name', text)}
+            placeholder="Waypoint name..."
+            placeholderTextColor="#9CA3AF"
+          />
+
+          <Text style={styles.modalLabel}>Notes</Text>
+          <TextInput
+            style={[styles.modalInput, styles.modalInputMultiline]}
+            multiline
+            numberOfLines={3}
+            value={selectedWaypoint.notes}
+            onChangeText={text => updateWaypoint(selectedWaypoint.id, 'notes', text)}
+            placeholder="Trail notes, conditions, campsite info..."
+            placeholderTextColor="#9CA3AF"
+          />
+
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => {
+              deleteWaypoint(selectedWaypoint.id);
+              setSelectedWaypointId(null);
+            }}
+          >
+            <Text style={styles.deleteBtnText}>Delete Waypoint</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </KeyboardAvoidingView>
+</Modal>
+
     </View>
   );
 }
@@ -354,5 +379,87 @@ resultItem: {
 resultText: {
   fontSize: 14,
   color: '#111',
+},
+crosshairContainer: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+crosshairMarker: {
+  width: 22,
+  height: 22,
+  borderRadius: 11,
+  backgroundColor: 'rgba(224, 251, 249, 0.6)',
+  borderWidth: 3,
+  borderColor: '#fff',
+  shadowColor: '#000',
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+},
+crosshairShadow: {
+  width: 8,
+  height: 4,
+  borderRadius: 4,
+  backgroundColor: 'rgba(0,0,0,0.2)',
+  marginTop: 4,
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.3)',
+},
+modalSheet: {
+  backgroundColor: '#fff',
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+  paddingHorizontal: 20,
+  paddingTop: 12,
+},
+modalHandle: {
+  width: 36,
+  height: 4,
+  borderRadius: 2,
+  backgroundColor: '#E5E7EB',
+  alignSelf: 'center',
+  marginBottom: 20,
+},
+modalLabel: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#6B7280',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  marginBottom: 6,
+  marginTop: 12,
+},
+modalInput: {
+  backgroundColor: '#F9FAFB',
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  fontSize: 15,
+  color: '#111',
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+},
+modalInputMultiline: {
+  height: 80,
+  textAlignVertical: 'top',
+},
+deleteBtn: {
+  marginTop: 20,
+  backgroundColor: '#FEF2F2',
+  borderRadius: 12,
+  paddingVertical: 14,
+  alignItems: 'center',
+},
+deleteBtnText: {
+  color: '#EF4444',
+  fontWeight: '600',
+  fontSize: 15,
 },
 });
