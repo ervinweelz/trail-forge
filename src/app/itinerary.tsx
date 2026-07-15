@@ -3,6 +3,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTripContext } from '@/context/TripContext';
+import { haversineKm } from '@/utils/geo';
 
 export default function ItineraryScreen() {
   const insets = useSafeAreaInsets();
@@ -30,6 +31,10 @@ export default function ItineraryScreen() {
       <View className="mx-4 mt-6 gap-3">
         {days.map((day, idx) => {
           const dayWaypoints = waypoints.filter(w => w.dayId === day.id);
+          const rawEstimate = dayWaypoints
+            .slice(1)
+            .reduce((sum, wp, i) => sum + haversineKm(dayWaypoints[i], wp), 0);
+          const estimatedKm = Math.round(rawEstimate * 10) / 10;
           return (
           <View
             key={day.id}
@@ -64,6 +69,16 @@ export default function ItineraryScreen() {
                     placeholder="0"
                     placeholderTextColor="#9CA3AF"
                   />
+                  {estimatedKm > 0 && estimatedKm !== day.distanceKm && (
+                    <TouchableOpacity
+                      onPress={() => updateDay(day.id, 'distanceKm', estimatedKm)}
+                      className="self-start mt-2 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full px-3 py-1"
+                    >
+                      <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        Est. {estimatedKm} km — use this
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
