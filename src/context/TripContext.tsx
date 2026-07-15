@@ -70,6 +70,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
 
   function deleteDay(id: number) {
     setDays(prev => prev.filter(d => d.id !== id));
+    setWaypoints(prev => prev.map(w => w.dayId === id ? { ...w, dayId: null } : w));
   }
 
   function addWaypoint(lat: number, lng: number) {

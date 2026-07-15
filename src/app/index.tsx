@@ -7,6 +7,7 @@ import {
   Modal,
   NativeSyntheticEvent,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -73,7 +74,7 @@ export default function MapScreen() {
   const mapCenterRef = useRef<[number, number]>(INITIAL_CENTER);
   const [weather, setWeather] = useState<Weather | null>(null);
   const cameraRef = useRef<CameraRef>(null);
-  const { waypoints, addWaypoint, updateWaypoint, assignWaypoint, deleteWaypoint } = useTripContext();
+  const { days, waypoints, addWaypoint, updateWaypoint, assignWaypoint, deleteWaypoint } = useTripContext();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -137,7 +138,7 @@ const handleDropWaypoint = useCallback(() => {
           lngLat={[waypoint.lng, waypoint.lat]}
           onPress={() => setSelectedWaypointId(waypoint.id)}
         >
-          <View style={styles.marker} />
+          <View style={[styles.marker, waypoint.dayId !== null && styles.markerAssigned]} />
         </Marker>
       ))}
       </Map>
@@ -241,6 +242,29 @@ const handleDropWaypoint = useCallback(() => {
             placeholderTextColor="#9CA3AF"
           />
 
+          <Text style={styles.modalLabel}>Day</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayChipRow}>
+            <TouchableOpacity
+              style={[styles.dayChip, selectedWaypoint.dayId === null && styles.dayChipActive]}
+              onPress={() => assignWaypoint(selectedWaypoint.id, null)}
+            >
+              <Text style={[styles.dayChipText, selectedWaypoint.dayId === null && styles.dayChipTextActive]}>
+                None
+              </Text>
+            </TouchableOpacity>
+            {days.map((day, idx) => (
+              <TouchableOpacity
+                key={day.id}
+                style={[styles.dayChip, selectedWaypoint.dayId === day.id && styles.dayChipActive]}
+                onPress={() => assignWaypoint(selectedWaypoint.id, day.id)}
+              >
+                <Text style={[styles.dayChipText, selectedWaypoint.dayId === day.id && styles.dayChipTextActive]}>
+                  Day {idx + 1}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           <TouchableOpacity
             style={styles.deleteBtn}
             onPress={() => {
@@ -332,13 +356,16 @@ const styles = StyleSheet.create({
   width: 20,
   height: 20,
   borderRadius: 10,
-  backgroundColor: '#1D6D4A',
+  backgroundColor: '#9CA3AF',
   borderWidth: 3,
   borderColor: '#fff',
   shadowColor: '#000',
   shadowOpacity: 0.3,
   shadowRadius: 4,
   shadowOffset: { width: 0, height: 2 },
+},
+markerAssigned: {
+  backgroundColor: '#1D6D4A',
 },
 searchContainer: {
   position: 'absolute',
@@ -449,6 +476,30 @@ modalInput: {
 modalInputMultiline: {
   height: 80,
   textAlignVertical: 'top',
+},
+dayChipRow: {
+  flexDirection: 'row',
+},
+dayChip: {
+  backgroundColor: '#F9FAFB',
+  borderRadius: 100,
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  marginRight: 8,
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+},
+dayChipActive: {
+  backgroundColor: '#1D6D4A',
+  borderColor: '#1D6D4A',
+},
+dayChipText: {
+  fontSize: 13,
+  fontWeight: '600',
+  color: '#374151',
+},
+dayChipTextActive: {
+  color: '#FFFFFF',
 },
 deleteBtn: {
   marginTop: 20,

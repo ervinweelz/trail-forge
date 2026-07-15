@@ -6,7 +6,7 @@ import { useTripContext } from '@/context/TripContext';
 
 export default function ItineraryScreen() {
   const insets = useSafeAreaInsets();
-  const { tripName, setTripName, days, addDay, updateDay, deleteDay } = useTripContext();
+  const { tripName, setTripName, days, addDay, updateDay, deleteDay, waypoints, assignWaypoint } = useTripContext();
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const totalDistance = days.reduce((sum, day) => sum + day.distanceKm, 0);
@@ -28,7 +28,9 @@ export default function ItineraryScreen() {
       </Text>
 
       <View className="mx-4 mt-6 gap-3">
-        {days.map((day, idx) => (
+        {days.map((day, idx) => {
+          const dayWaypoints = waypoints.filter(w => w.dayId === day.id);
+          return (
           <View
             key={day.id}
             className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
@@ -41,7 +43,7 @@ export default function ItineraryScreen() {
                   Day {idx + 1}
                 </Text>
                 <Text className="text-sm text-gray-400 dark:text-gray-500 mr-3">
-                  {day.distanceKm} km
+                  {day.distanceKm} km · {dayWaypoints.length} {dayWaypoints.length === 1 ? 'waypoint' : 'waypoints'}
                 </Text>
                 <Text className="text-gray-400 dark:text-gray-500">
                   {expandedId === day.id ? '▼' : '▶'}
@@ -77,6 +79,31 @@ export default function ItineraryScreen() {
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
+                {dayWaypoints.length > 0 && (
+                  <View>
+                    <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                      Waypoints
+                    </Text>
+                    <View className="gap-2">
+                      {dayWaypoints.map(waypoint => (
+                        <View
+                          key={waypoint.id}
+                          className="flex-row items-center bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3"
+                        >
+                          <Text className="flex-1 text-sm text-gray-800 dark:text-gray-200" numberOfLines={1}>
+                            {waypoint.name}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => assignWaypoint(waypoint.id, null)}
+                            className="ml-3 bg-red-50 px-2 py-1 rounded-lg"
+                          >
+                            <Text className="text-red-500 font-semibold text-sm">x</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
                 <TouchableOpacity
                   onPress={() => deleteDay(day.id)}
                   className="mt-2 bg-red-50 rounded-xl py-3 items-center"
@@ -86,7 +113,8 @@ export default function ItineraryScreen() {
               </View>
             )}
           </View>
-        ))}
+          );
+        })}
       </View>
 
       <View className="mx-4 mt-4">
